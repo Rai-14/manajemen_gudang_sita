@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use App\Models\User; // Pastikan User diimport jika belum
 
 class TransactionController extends Controller
 {
@@ -40,6 +41,16 @@ class TransactionController extends Controller
         if ($type = $request->input('type')) {
             $query->where('type', $type);
         }
+        
+        // Filter Status (Tambahan untuk Manager/Admin)
+        if ($status = $request->input('status')) {
+             if ($status === 'pending_approval' && (Auth::user()->isAdmin() || Auth::user()->isManager())) {
+                $query->where('status', 'Pending');
+             } else {
+                $query->where('status', $status);
+             }
+        }
+
 
         $transactions = $query->paginate(15)->appends($request->query());
 
@@ -51,12 +62,9 @@ class TransactionController extends Controller
      */
     public function create()
     {
-        // Hanya Staff/Manager/Admin yang boleh membuat
         if (Auth::user()->isSupplier()) {
             abort(403, 'Akses Ditolak.');
         }
-        
-        // Form ini akan mengarahkan ke create_incoming atau create_outgoing
         return view('transactions.create_type'); 
     }
 
@@ -66,9 +74,7 @@ class TransactionController extends Controller
     public function createIncoming()
     {
         $suppliers = Supplier::orderBy('name')->get();
-        // Ambil ID, nama, SKU, dan unit saja untuk efisiensi di form multi-entry
         $products = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit', 'current_stock']); 
-        
         return view('transactions.incoming', compact('suppliers', 'products'));
     }
 
@@ -82,28 +88,21 @@ class TransactionController extends Controller
             'transaction_date' => 'required|date',
             'supplier_id' => 'required|exists:suppliers,id',
             'notes' => 'nullable|string|max:500',
-            // Validasi untuk item produk (harus berupa array)
             'products' => 'required|array|min:1',
-            // Validasi setiap item di dalam array products
             'products.*.product_id' => 'required|exists:products,id',
             'products.*.quantity' => 'required|integer|min:1',
         ]);
         
-        // Mulai Database Transaction
         DB::beginTransaction();
-
         try {
             // 2. Buat Nomor Transaksi (Auto-generated: IN/YYMM/XXX)
             $datePart = date('ym');
-            // Hanya cari transaksi 'incoming'
             $latestTransaction = Transaction::where('type', 'incoming')
                                             ->where('transaction_number', 'like', "IN/{$datePart}/%")
                                             ->latest()
                                             ->first();
-            
             $nextNumber = 1;
             if ($latestTransaction) {
-                // Ambil 3 digit terakhir, konversi ke integer, tambahkan 1
                 $lastNumber = (int) substr($latestTransaction->transaction_number, -3);
                 $nextNumber = $lastNumber + 1;
             }
@@ -155,7 +154,6 @@ class TransactionController extends Controller
     public function createOutgoing()
     {
         $products = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit', 'current_stock']);
-
         return view('transactions.outgoing', compact('products'));
     }
 
@@ -188,9 +186,7 @@ class TransactionController extends Controller
             }
         }
         
-        // Mulai Database Transaction
         DB::beginTransaction();
-
         try {
             // 2. Buat Nomor Transaksi (Auto-generated: OUT/YYMM/XXX)
             $datePart = date('ym');
@@ -244,5 +240,90 @@ class TransactionController extends Controller
         }
     }
     
-    // ... (method show, edit, update, destroy, dan approval akan ditambahkan di langkah berikutnya) ...
+    // --- BARIS BARU DARI LANGKAH 17 ---
+
+    /**
+     * Menampilkan detail transaksi.
+     */
+    public function show(Transaction $transaction)
+    {
+        // Pastikan relasi details dimuat bersama produk
+        $transaction->load('details.product'); 
+        
+        return view('transactions.show', compact('transaction'));
+    }
+
+    /**
+     * Menyetujui dan memverifikasi transaksi.
+     */
+    public function approve(Transaction $transaction)
+    {
+        // 1. Otorisasi dan Status Check
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Anda tidak memiliki izin untuk menyetujui transaksi.');
+        }
+        if ($transaction->status !== 'Pending') {
+            return redirect()->back()->with('error', 'Transaksi sudah diproses atau dibatalkan.');
+        }
+        
+        DB::beginTransaction();
+        try {
+            $updateType = ($transaction->type === 'incoming') ? '+' : '-';
+            $success = true;
+
+            // 2. Update Stok dan Detail
+            foreach ($transaction->details as $detail) {
+                $product = $detail->product;
+                $quantity = $detail->quantity;
+                
+                // Jika Barang Keluar, cek stok lagi (validasi terakhir sebelum update)
+                if ($transaction->type === 'outgoing' && $product->current_stock < $quantity) {
+                    $success = false;
+                    break; // Keluar dari loop jika stok tidak mencukupi
+                }
+
+                // Update Stok menggunakan DB::raw
+                $product->current_stock = DB::raw("current_stock {$updateType} {$quantity}");
+                $product->save();
+            }
+
+            if (!$success) {
+                DB::rollback();
+                return redirect()->back()->with('error', "Gagal menyetujui! Stok salah satu produk tidak mencukupi saat proses approval.");
+            }
+
+            // 3. Update Status Transaksi
+            $newStatus = ($transaction->type === 'incoming') ? 'Verified' : 'Approved';
+            $transaction->status = $newStatus;
+            $transaction->save();
+            
+            DB::commit();
+
+            return redirect()->route('transactions.index')->with('success', "Transaksi #{$transaction->transaction_number} berhasil disetujui dan stok telah diperbarui.");
+        
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menyetujui transaksi. Kesalahan sistem: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Menolak transaksi.
+     */
+    public function reject(Transaction $transaction)
+    {
+        // 1. Otorisasi dan Status Check
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Anda tidak memiliki izin untuk menolak transaksi.');
+        }
+        if ($transaction->status !== 'Pending') {
+            return redirect()->back()->with('error', 'Transaksi sudah diproses atau dibatalkan.');
+        }
+        
+        // 2. Update Status menjadi Rejected
+        $transaction->status = 'Rejected';
+        $transaction->save();
+        
+        return redirect()->route('transactions.index')->with('success', "Transaksi #{$transaction->transaction_number} berhasil ditolak.");
+    }
 }
