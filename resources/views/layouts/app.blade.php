@@ -32,5 +32,7 @@
                 {{ $slot }}
             </main>
         </div>
+        <!-- Stack untuk Alpine.js scripts dari view child -->
+        @stack('scripts')
     </body>
 </html>
