@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('restock_order_details', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('restock_order_id')->constrained()->onDelete('cascade'); // Relasi ke restock_orders
+            $table->foreignId('product_id')->constrained()->onDelete('cascade'); // Relasi ke products
+            $table->unsignedInteger('quantity');
             $table->timestamps();
         });
     }

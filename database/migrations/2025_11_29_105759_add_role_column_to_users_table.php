@@ -18,7 +18,15 @@ return new class extends Migration
             // Tambahkan kolom supplier_id untuk menghubungkan pengguna (Supplier role) ke tabel suppliers
             // Gunakan 'nullable' karena hanya berlaku untuk role 'supplier'. 
             // Pastikan tabel suppliers sudah ada sebelum migrasi ini
-            $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->onDelete('set null');
+
+             $table->unsignedBigInteger('supplier_id')
+                  ->nullable()->after('password');
+
+            // Add the foreign key constraint
+            $table->foreign('supplier_id')
+                  ->references('id')
+                  ->on('suppliers')
+                  ->onDelete('set null');
         });
     }
 

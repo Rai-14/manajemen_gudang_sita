@@ -12,11 +12,8 @@ class RolesAndAdminSeeder extends Seeder
     /**
      * Jalankan seeder database.
      */
-    public function run(): void
+    public function run()
     {
-        // Pastikan tabel supplier kosong untuk menghindari duplikasi email
-        Supplier::truncate();
-        User::truncate(); 
 
         // 1. Buat Dummy Supplier
         $supplier1 = Supplier::create([

@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
+            $table->string('name')->unique(); // Nama kategori harus unik
+            $table->text('description')->nullable();
+            $table->string('image_path')->nullable(); // Untuk gambar kategori
             $table->timestamps();
         });
     }
