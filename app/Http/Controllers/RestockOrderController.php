@@ -14,7 +14,7 @@ use Carbon\Carbon;
 
 class RestockOrderController extends Controller
 {
-    // Konstruktor dimatikan karena isu middleware di Laravel 11
+    // Konstruktor dimatikan sementara karena isu kompatibilitas middleware di Laravel 11
     // public function __construct()
     // {
     //     $this->middleware('auth');
@@ -31,6 +31,7 @@ class RestockOrderController extends Controller
         
         // Filter berdasarkan peran:
         if (Auth::user()->isSupplier()) {
+            // Supplier hanya melihat pesanan milik mereka
             $query->where('supplier_id', Auth::user()->supplier_id);
         }
 
@@ -40,17 +41,17 @@ class RestockOrderController extends Controller
     }
 
     /**
-     * Menampilkan form untuk membuat Restock Order baru (Hanya Manager/Admin).
+     * Menampilkan form untuk membuat Restock Order baru.
      */
     public function create()
     {
         if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
-            abort(403, 'Anda tidak memiliki izin untuk membuat Restock Order.');
+            abort(403, 'Akses Ditolak.');
         }
 
         $suppliers = Supplier::orderBy('name')->get();
         
-        // Ambil produk low stock atau habis
+        // Ambil produk low stock atau habis untuk saran
         $products = Product::whereColumn('current_stock', '<=', 'min_stock')
                            ->orWhere('current_stock', 0)
                            ->orderBy('name')
@@ -70,7 +71,7 @@ class RestockOrderController extends Controller
     public function store(Request $request)
     {
         if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
-            abort(403, 'Anda tidak memiliki izin.');
+            abort(403, 'Akses Ditolak.');
         }
 
         $request->validate([
@@ -86,7 +87,7 @@ class RestockOrderController extends Controller
         DB::beginTransaction();
 
         try {
-            // Auto Generate PO Number
+            // Generate PO Number
             $datePart = date('ym');
             $latestOrder = RestockOrder::where('po_number', 'like', "PO/{$datePart}/%")
                                        ->latest()
@@ -179,6 +180,7 @@ class RestockOrderController extends Controller
         $request->validate(['status' => ['required', Rule::in(['In Transit', 'Received'])]]);
         $newStatus = $request->status;
 
+        // Validasi Alur Status
         if ($newStatus === 'In Transit' && $restockOrder->status !== 'Confirmed by Supplier') {
             return redirect()->back()->with('error', 'Pesanan harus dikonfirmasi supplier dulu.');
         }
