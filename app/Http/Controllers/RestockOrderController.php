@@ -10,19 +10,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Carbon\Carbon; // Import Carbon untuk tanggal
+use Carbon\Carbon;
 
 class RestockOrderController extends Controller
 {
-    /**
-     * Konstruktor untuk membatasi akses berdasarkan peran.
-     */
-    public function __construct()
-    {
-        // Akses diizinkan untuk Admin, Manager, dan Supplier
-        $this->middleware('auth');
-        $this->middleware('role:admin,manager,supplier');
-    }
+    // Konstruktor dimatikan karena isu middleware di Laravel 11
+    // public function __construct()
+    // {
+    //     $this->middleware('auth');
+    //     $this->middleware('role:admin,manager,supplier');
+    // }
 
     /**
      * Menampilkan daftar Restock Order.
@@ -34,7 +31,6 @@ class RestockOrderController extends Controller
         
         // Filter berdasarkan peran:
         if (Auth::user()->isSupplier()) {
-            // Supplier hanya melihat pesanan yang ditujukan kepada mereka
             $query->where('supplier_id', Auth::user()->supplier_id);
         }
 
@@ -48,38 +44,35 @@ class RestockOrderController extends Controller
      */
     public function create()
     {
-        // Otorisasi internal tambahan
         if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
             abort(403, 'Anda tidak memiliki izin untuk membuat Restock Order.');
         }
 
         $suppliers = Supplier::orderBy('name')->get();
-        // Ambil data produk yang stoknya di bawah minimum atau 0
+        
+        // Ambil produk low stock atau habis
         $products = Product::whereColumn('current_stock', '<=', 'min_stock')
                            ->orWhere('current_stock', 0)
                            ->orderBy('name')
                            ->get(['id', 'name', 'sku', 'unit', 'min_stock', 'current_stock']);
         
-        // Jika tidak ada produk low stock, tampilkan semua produk
+        // Fallback: Jika tidak ada low stock, tampilkan semua
         if ($products->isEmpty()) {
              $products = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit', 'min_stock', 'current_stock']);
         }
-
 
         return view('restock_orders.create', compact('suppliers', 'products'));
     }
 
     /**
-     * Menyimpan Restock Order baru ke database (Hanya Manager/Admin).
+     * Menyimpan Restock Order baru.
      */
     public function store(Request $request)
     {
-        // Otorisasi internal tambahan
         if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
-            abort(403, 'Anda tidak memiliki izin untuk membuat Restock Order.');
+            abort(403, 'Anda tidak memiliki izin.');
         }
 
-        // 1. Validasi Data
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
@@ -93,11 +86,11 @@ class RestockOrderController extends Controller
         DB::beginTransaction();
 
         try {
-            // 2. Buat Nomor PO (Auto-generated: PO/YYMM/XXX)
+            // Auto Generate PO Number
             $datePart = date('ym');
             $latestOrder = RestockOrder::where('po_number', 'like', "PO/{$datePart}/%")
-                                            ->latest()
-                                            ->first();
+                                       ->latest()
+                                       ->first();
             
             $nextNumber = 1;
             if ($latestOrder) {
@@ -106,20 +99,18 @@ class RestockOrderController extends Controller
             }
             $poNumber = "PO/{$datePart}/" . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 
-            // 3. Simpan Restock Order Utama
             $order = RestockOrder::create([
                 'po_number' => $poNumber,
                 'supplier_id' => $request->supplier_id,
-                'user_id' => Auth::id(), // Manager yang membuat
+                'user_id' => Auth::id(),
                 'order_date' => $request->order_date,
                 'expected_delivery_date' => $request->expected_delivery_date,
                 'notes' => $request->notes,
-                'status' => 'Pending', // Status awal: Menunggu Konfirmasi Supplier
+                'status' => 'Pending',
             ]);
 
             $orderDetails = [];
 
-            // 4. Simpan Detail Restock
             foreach ($request->products as $item) {
                 $productId = $item['product_id'];
                 $quantity = (int) $item['quantity'];
@@ -134,84 +125,74 @@ class RestockOrderController extends Controller
             
             $order->details()->saveMany($orderDetails);
 
-            // 5. Commit Transaksi Database
             DB::commit();
 
-            return redirect()->route('restock_orders.index')->with('success', "Restock Order #{$poNumber} berhasil dibuat dan dikirim ke Supplier.");
+            return redirect()->route('restock_orders.index')->with('success', "Restock Order #{$poNumber} berhasil dibuat.");
 
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->withInput()->with('error', 'Gagal menyimpan Restock Order. Terjadi kesalahan sistem: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Gagal menyimpan Order: ' . $e->getMessage());
         }
     }
     
     /**
-     * Menampilkan detail Restock Order.
+     * Menampilkan detail.
      */
     public function show(RestockOrder $restockOrder)
     {
-        // Pastikan relasi details dimuat bersama produk
         $restockOrder->load('details.product', 'supplier');
         
-        // Otorisasi: Manager/Admin harus bisa melihat. Supplier hanya boleh melihat PO mereka.
         if (Auth::user()->isSupplier() && Auth::user()->supplier_id !== $restockOrder->supplier_id) {
-             abort(403, 'Anda tidak memiliki izin untuk melihat pesanan ini.');
+             abort(403, 'Akses ditolak.');
         }
 
         return view('restock_orders.show', compact('restockOrder'));
     }
 
     /**
-     * Logika untuk Supplier mengkonfirmasi atau menolak order.
+     * Konfirmasi Supplier.
      */
     public function confirmOrder(Request $request, RestockOrder $restockOrder)
     {
-        // 1. Otorisasi dan Status Check
         if (!Auth::user()->isSupplier() || Auth::user()->supplier_id !== $restockOrder->supplier_id) {
-            abort(403, 'Anda tidak memiliki izin untuk mengkonfirmasi pesanan ini.');
+            abort(403, 'Akses ditolak.');
         }
         if ($restockOrder->status !== 'Pending') {
-            return redirect()->back()->with('error', 'Pesanan sudah dikonfirmasi atau dibatalkan.');
+            return redirect()->back()->with('error', 'Status pesanan tidak valid.');
         }
         
-        // 2. Update Status menjadi Confirmed by Supplier
         $restockOrder->status = 'Confirmed by Supplier';
         $restockOrder->save();
         
-        return redirect()->back()->with('success', "Pesanan #{$restockOrder->po_number} berhasil dikonfirmasi dan sedang diproses.");
+        return redirect()->back()->with('success', "Pesanan #{$restockOrder->po_number} berhasil dikonfirmasi.");
     }
     
     /**
-     * Logika untuk Manager/Admin update status pengiriman (In Transit / Received).
+     * Update Status (Manager).
      */
     public function updateStatus(Request $request, RestockOrder $restockOrder)
     {
-        // 1. Otorisasi dan Validasi
         if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
-            abort(403, 'Anda tidak memiliki izin untuk mengubah status pengiriman.');
+            abort(403, 'Akses ditolak.');
         }
         
         $request->validate(['status' => ['required', Rule::in(['In Transit', 'Received'])]]);
         $newStatus = $request->status;
 
-        // Cek Status Transisi
         if ($newStatus === 'In Transit' && $restockOrder->status !== 'Confirmed by Supplier') {
-            return redirect()->back()->with('error', 'Status tidak valid. Pesanan harus dalam status "Confirmed by Supplier" sebelum menjadi "In Transit".');
+            return redirect()->back()->with('error', 'Pesanan harus dikonfirmasi supplier dulu.');
         }
         if ($newStatus === 'Received' && $restockOrder->status !== 'In Transit') {
-            return redirect()->back()->with('error', 'Status tidak valid. Pesanan harus dalam status "In Transit" sebelum menjadi "Received".');
+            return redirect()->back()->with('error', 'Pesanan harus status In Transit dulu.');
         }
 
-        // 2. Update Status
         $restockOrder->status = $newStatus;
         $restockOrder->save();
         
-        // 3. Tambahkan Notifikasi Khusus saat Received
         if ($newStatus === 'Received') {
-            $message = "Status pesanan #{$restockOrder->po_number} diubah menjadi Received. PENTING: Staff Gudang harus membuat Transaksi Barang Masuk secara manual.";
-            return redirect()->back()->with('success', $message);
+            return redirect()->back()->with('success', "Pesanan Diterima. Stok belum bertambah otomatis. Silakan buat Transaksi Barang Masuk.");
         }
 
-        return redirect()->back()->with('success', "Status pesanan #{$restockOrder->po_number} berhasil diubah menjadi {$newStatus}.");
+        return redirect()->back()->with('success', "Status berhasil diperbarui menjadi {$newStatus}.");
     }
 }
