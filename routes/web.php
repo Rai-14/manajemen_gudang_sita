@@ -6,13 +6,13 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\RestockOrderController;
-use App\Http\Controllers\DashboardController; //Import DashboardController
+use App\Http\Controllers\DashboardController; 
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', [DashboardController::class, 'index']) // PERUBAHAN DI SINI
+Route::get('/dashboard', [DashboardController::class, 'index']) 
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
@@ -26,21 +26,27 @@ Route::middleware('auth')->group(function () {
     
     // Resource Route untuk Kategori
     Route::resource('categories', CategoryController::class);
-
-    // Resource Route dan Custom Route untuk Transaksi
-    Route::resource('transactions', TransactionController::class)->except(['create', 'store', 'edit', 'update', 'destroy']);
     
     // Custom routes untuk Transaksi
     Route::controller(TransactionController::class)->group(function () {
+        // Halaman awal pilih tipe transaksi (Masuk/Keluar)
+        Route::get('transactions/create', 'create')->name('transactions.create');
+
+        // Route Barang Masuk
         Route::get('transactions/incoming/create', 'createIncoming')->name('transactions.create_incoming');
         Route::post('transactions/incoming', 'storeIncoming')->name('transactions.store_incoming');
 
+        // Route Barang Keluar
         Route::get('transactions/outgoing/create', 'createOutgoing')->name('transactions.create_outgoing');
         Route::post('transactions/outgoing', 'storeOutgoing')->name('transactions.store_outgoing');
         
+        // Approval
         Route::patch('transactions/{transaction}/approve', 'approve')->name('transactions.approve');
         Route::patch('transactions/{transaction}/reject', 'reject')->name('transactions.reject');
     });
+
+    // Resource Route diletakkan DI BAWAH Custom Route
+    Route::resource('transactions', TransactionController::class)->except(['create', 'store', 'edit', 'update', 'destroy']);
 
     // Resource Route untuk Restock Orders
     Route::resource('restock_orders', RestockOrderController::class)->except(['edit', 'update', 'destroy']);

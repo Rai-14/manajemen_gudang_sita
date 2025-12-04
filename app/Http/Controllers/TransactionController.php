@@ -15,14 +15,16 @@ use App\Models\User; // Pastikan User diimport jika belum
 class TransactionController extends Controller
 {
     /**
-     * Konstruktor untuk membatasi akses berdasarkan peran.
+     * Konstruktor DIKOMENTARI sementara karena error di Laravel 11.
+     * Middleware 'auth' sudah ditangani di routes/web.php.
+     * Middleware 'role' nanti bisa kita pindahkan ke routes/web.php juga.
      */
-    public function __construct()
-    {
-        // Semua peran kecuali Supplier diizinkan untuk melihat/mengelola transaksi
-        $this->middleware('auth');
-        $this->middleware('role:admin,manager,staff');
-    }
+    // public function __construct()
+    // {
+    //     // Semua peran kecuali Supplier diizinkan untuk melihat/mengelola transaksi
+    //     $this->middleware('auth');
+    //     $this->middleware('role:admin,manager,staff');
+    // }
 
     /**
      * Menampilkan daftar transaksi.

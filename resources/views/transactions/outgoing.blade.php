@@ -1,101 +1,144 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Catat Barang Keluar') }}
+        </h2>
+    </x-slot>
 
-@section('header')
-    <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-        {{ __('Record Outgoing Stock') }}
-    </h2>
-@endsection
-
-@section('content')
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            
+            {{-- Error Validasi Global --}}
+            @if ($errors->any())
+                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                    <strong class="font-bold">Periksa Inputan!</strong>
+                    <span class="block sm:inline">Stok tidak cukup atau data tidak lengkap.</span>
+                </div>
+            @endif
+
+            {{-- Error System --}}
+            @if(session('error'))
+                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900" x-data="transactionForm()">
-                    <h3 class="text-lg font-medium text-gray-900 mb-6">{{ __('Transaction Details: Outgoing Stock') }}</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-6">{{ __('Detail Transaksi: Barang Keluar') }}</h3>
 
-                    {{-- Form menuju TransactionController@storeOutgoing --}}
                     <form method="POST" action="{{ route('transactions.store_outgoing') }}">
                         @csrf
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {{-- Kolom Kiri: Info Transaksi --}}
+                            {{-- Kolom Kiri --}}
                             <div>
-                                {{-- Nomor Transaksi (Nanti auto-generated di Controller) --}}
                                 <div class="mb-4">
-                                    <label for="transaction_number" class="block font-medium text-sm text-gray-700">Transaction Number (Auto)</label>
-                                    <input id="transaction_number" type="text" value="AUTO GENERATED" disabled
-                                        class="mt-1 block w-full border-gray-300 bg-gray-100 rounded-md shadow-sm">
+                                    <label class="block font-medium text-sm text-gray-700">Nomor Transaksi</label>
+                                    <input type="text" value="OTOMATIS (AUTO)" disabled class="mt-1 block w-full border-gray-300 bg-gray-100 rounded-md shadow-sm">
                                 </div>
                                 
-                                {{-- Tanggal Pengiriman --}}
                                 <div class="mb-4">
-                                    <label for="transaction_date" class="block font-medium text-sm text-gray-700">Shipping Date</label>
+                                    <label for="transaction_date" class="block font-medium text-sm text-gray-700">Tanggal Pengiriman</label>
                                     <input id="transaction_date" type="date" name="transaction_date" value="{{ old('transaction_date', date('Y-m-d')) }}" required
-                                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm @error('transaction_date') border-red-500 @enderror">
-                                    @error('transaction_date')
-                                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-                                    @enderror
+                                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    @error('transaction_date') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
                                 </div>
 
-                                {{-- Nama Customer/Tujuan --}}
                                 <div class="mb-4">
-                                    <label for="customer_name" class="block font-medium text-sm text-gray-700">Customer / Destination Name</label>
-                                    <input id="customer_name" type="text" name="customer_name" value="{{ old('customer_name') }}" required
-                                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm @error('customer_name') border-red-500 @enderror">
-                                    @error('customer_name')
-                                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-                                    @enderror
+                                    <label for="customer_name" class="block font-medium text-sm text-gray-700">Nama Customer / Tujuan</label>
+                                    <input id="customer_name" type="text" name="customer_name" value="{{ old('customer_name') }}" required placeholder="Contoh: PT. Maju Jaya / Divisi Produksi"
+                                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    @error('customer_name') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
                                 </div>
                             </div>
 
-                            {{-- Kolom Kanan: Catatan --}}
+                            {{-- Kolom Kanan --}}
                             <div>
                                 <div class="mb-4">
-                                    <label for="notes" class="block font-medium text-sm text-gray-700">Notes / Reference</label>
-                                    <textarea id="notes" name="notes" rows="6"
-                                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm @error('notes') border-red-500 @enderror">{{ old('notes') }}</textarea>
-                                    @error('notes')
-                                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-                                    @enderror
+                                    <label for="notes" class="block font-medium text-sm text-gray-700">Catatan / Referensi</label>
+                                    <textarea id="notes" name="notes" rows="6" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('notes') }}</textarea>
                                 </div>
                             </div>
                         </div>
                         
-                        <h4 class="text-lg font-medium text-gray-900 mt-8 mb-4 border-t pt-4">{{ __('Product List') }}</h4>
+                        <h4 class="text-lg font-medium text-gray-900 mt-8 mb-4 border-t pt-4">{{ __('Daftar Produk Keluar') }}</h4>
 
-                        {{-- Daftar Produk (Multi-Entry menggunakan Alpine.js) --}}
+                        {{-- Tabel Produk --}}
                         <div class="overflow-x-auto mb-6">
                             <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">{{ __('Product Name (SKU)') }}</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">{{ __('Quantity Out') }}</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">{{ __('Current Stock') }}</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-1/3">Produk</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-1/5">Stok Tersedia</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-1/5">Jumlah Keluar</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-1/6">Satuan</th>
+                                        <th class="px-3 py-2 w-10"></th>
                                     </tr>
                                 </thead>
-                                <tbody class="bg-white divide-y divide-gray-200" x-html="renderRows()">
-                                    {{-- Rows will be injected by Alpine.js --}}
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="(item, index) in items" :key="index">
+                                        <tr>
+                                            <td class="p-2">
+                                                <select :name="`products[${index}][product_id]`" 
+                                                        x-model="item.product_id" 
+                                                        @change="updateInfo(index)"
+                                                        required 
+                                                        class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                    <option value="">-- Pilih Produk --</option>
+                                                    <template x-for="prod in products" :key="prod.id">
+                                                        <option :value="prod.id" x-text="`${prod.name} (SKU: ${prod.sku})`"></option>
+                                                    </template>
+                                                </select>
+                                            </td>
+                                            <td class="p-2">
+                                                {{-- Menampilkan Stok Tersedia (Readonly) --}}
+                                                <div class="flex items-center">
+                                                    <span x-text="item.stock" :class="{'text-red-600 font-bold': item.stock === 0, 'text-green-600': item.stock > 0}" class="text-sm font-medium"></span>
+                                                    <span class="text-xs text-gray-500 ml-1" x-text="item.stock > 0 ? '(Available)' : ''"></span>
+                                                </div>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="number" 
+                                                       :name="`products[${index}][quantity]`" 
+                                                       x-model="item.quantity" 
+                                                       min="1" 
+                                                       :max="item.stock"
+                                                       required
+                                                       class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                       :class="{'border-red-500': item.quantity > item.stock}" 
+                                                       placeholder="0" />
+                                                
+                                                {{-- Peringatan jika melebihi stok --}}
+                                                <div x-show="parseInt(item.quantity) > item.stock" class="text-xs text-red-600 mt-1">
+                                                    Melebihi stok!
+                                                </div>
+                                            </td>
+                                            <td class="p-2">
+                                                <span x-text="item.unit || '-'" class="text-sm text-gray-600 block py-2 px-2 bg-gray-50 rounded border border-gray-200"></span>
+                                            </td>
+                                            <td class="p-2 text-center">
+                                                <button type="button" @click="removeRow(index)" class="text-red-500 hover:text-red-700 p-2" :disabled="items.length === 1">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
 
-                        {{-- Tombol Tambah Produk --}}
                         <div class="flex justify-start mb-8">
-                             <button type="button" @click="addRow()" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:outline-none focus:border-gray-400 disabled:opacity-25 transition ease-in-out duration-150">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                {{ __('Add Product Item') }}
+                             <button type="button" @click="addRow()" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 transition">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Tambah Item Produk
                             </button>
                         </div>
 
-
-                        {{-- Tombol Aksi --}}
                         <div class="flex items-center justify-end border-t pt-4">
-                            <a href="{{ route('transactions.index') }}" class="mr-4 text-sm font-semibold text-gray-600 hover:text-gray-900">
-                                {{ __('Cancel') }}
-                            </a>
+                            <a href="{{ route('transactions.index') }}" class="mr-4 text-sm font-semibold text-gray-600 hover:text-gray-900">Batal</a>
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 active:bg-red-900 focus:outline-none focus:border-red-900 focus:ring ring-red-300 disabled:opacity-25 transition ease-in-out duration-150">
-                                {{ __('Submit for Approval') }}
+                                Simpan Transaksi Keluar
                             </button>
                         </div>
                     </form>
@@ -103,121 +146,56 @@
             </div>
         </div>
     </div>
-@endsection
 
-{{-- Alpine.js Script untuk Multi-Product Entry --}}
-@push('scripts')
-<script>
-    function transactionForm() {
-        return {
-            // Data produk dari PHP (disimpan sebagai JSON)
-            products: @json($products),
-            // Array untuk menampung item yang dipilih (product_id, quantity)
-            items: [ { product_id: '', quantity: 0, current_stock: 0 } ],
+    @push('scripts')
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('transactionForm', () => ({
+                products: @json($products),
+                items: [],
 
-            init() {
-                const oldInput = {!! json_encode(old('products')) !!};
-                if (oldInput && oldInput.length > 0) {
-                    this.items = oldInput.map(item => {
-                        const product = this.products.find(p => p.id == item.product_id);
-                        return { 
-                            product_id: item.product_id, 
-                            quantity: item.quantity, 
-                            current_stock: product ? product.current_stock : 0
-                        };
-                    });
-                } else if (this.items.length === 0) {
-                     this.addRow(); // Pastikan selalu ada minimal 1 baris kosong
-                }
-            },
-            
-            // Tambah baris baru
-            addRow() {
-                this.items.push({ product_id: '', quantity: 0, current_stock: 0 });
-                this.$nextTick(() => {
-                    const lastRowIndex = this.items.length - 1;
-                    this.$refs['product_select_' + lastRowIndex]?.focus();
-                });
-            },
-
-            // Hapus baris
-            removeRow(index) {
-                if (this.items.length > 1) {
-                    this.items.splice(index, 1);
-                }
-            },
-            
-            // Update stok saat produk dipilih
-            updateStock(index) {
-                const selectedProductId = this.items[index].product_id;
-                const product = this.products.find(p => p.id == selectedProductId);
-                this.items[index].current_stock = product ? product.current_stock : 0;
-                // Reset quantity jika melebihi stok
-                if (this.items[index].quantity > this.items[index].current_stock) {
-                    this.items[index].quantity = this.items[index].current_stock;
-                }
-            },
-
-            // Pengecekan stok saat kuantitas diubah (Client-side validation helper)
-            checkStock(index) {
-                if (this.items[index].quantity > this.items[index].current_stock) {
-                    alert(`Quantity (${this.items[index].quantity}) exceeds current stock (${this.items[index].current_stock}). Setting quantity to max.`);
-                    this.items[index].quantity = this.items[index].current_stock;
-                }
-            },
-
-            // Render baris tabel
-            renderRows() {
-                return this.items.map((item, index) => {
-                    // Label error untuk validasi
-                    const quantityError = `<?php echo $errors->has('products.' . ${index} . '.quantity') ? '<p class="text-sm text-red-600 mt-1">' . $errors->first('products.' . ${index} . '.quantity') . '</p>' : ''; ?>`;
-
-                    // Generate Options untuk Select Produk
-                    let productOptions = '<option value="">-- Select Product --</option>';
-                    this.products.forEach(product => {
-                        const selected = (product.id == item.product_id) ? 'selected' : '';
-                        productOptions += `<option value="${product.id}" ${selected}>${product.name} (SKU: ${product.sku})</option>`;
-                    });
+                init() {
+                    const oldInput = @json(old('products'));
                     
-                    // Ambil unit dari data produk (untuk ditampilkan di Current Stock)
-                    const productUnit = this.products.find(p => p.id == item.product_id)?.unit || '';
+                    if (oldInput && Object.keys(oldInput).length > 0) {
+                        this.items = Object.values(oldInput).map(item => {
+                            const product = this.products.find(p => p.id == item.product_id);
+                            return { 
+                                product_id: item.product_id, 
+                                quantity: item.quantity, 
+                                stock: product ? product.current_stock : 0, // Ambil stok
+                                unit: product ? product.unit : '' 
+                            };
+                        });
+                    } else {
+                        this.addRow();
+                    }
+                },
+                
+                addRow() {
+                    this.items.push({ product_id: '', quantity: '', stock: 0, unit: '' });
+                },
 
-                    return `
-                        <tr>
-                            <td class="p-2">
-                                <select name="products[${index}][product_id]" 
-                                        x-ref="product_select_${index}"
-                                        x-model="items[${index}].product_id" 
-                                        @change="updateStock(${index})"
-                                        required 
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                    ${productOptions}
-                                </select>
-                            </td>
-                            <td class="p-2">
-                                <input type="number" 
-                                        name="products[${index}][quantity]" 
-                                        x-model.number="items[${index}].quantity" 
-                                        min="1" 
-                                        :max="items[${index}].current_stock"
-                                        @change="checkStock(${index})"
-                                        required
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" />
-                                ${quantityError}
-                            </td>
-                            <td class="p-2">
-                                <span x-text="items[${index}].current_stock + ' ' + ('${productUnit}')" class="text-sm text-gray-600"></span>
-                            </td>
-                            <td class="p-2 text-center">
-                                <button type="button" @click="removeRow(${index})" class="text-red-500 hover:text-red-700 disabled:opacity-50" :disabled="items.length === 1">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-        }
-    }
-</script>
-@endpush
+                removeRow(index) {
+                    if (this.items.length > 1) {
+                        this.items.splice(index, 1);
+                    }
+                },
+                
+                updateInfo(index) {
+                    const selectedId = this.items[index].product_id;
+                    const product = this.products.find(p => p.id == selectedId);
+                    
+                    if (product) {
+                        this.items[index].stock = product.current_stock;
+                        this.items[index].unit = product.unit;
+                    } else {
+                        this.items[index].stock = 0;
+                        this.items[index].unit = '';
+                    }
+                }
+            }));
+        });
+    </script>
+    @endpush
+</x-app-layout>
