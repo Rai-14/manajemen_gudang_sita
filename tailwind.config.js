@@ -12,8 +12,15 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                // Mengganti Figtree dengan Inter sebagai font utama
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
             },
+            // Menambahkan warna kustom (opsional, tapi bagus untuk konsistensi)
+            colors: {
+                slate: {
+                    850: '#1e293b', // Warna khusus untuk header
+                }
+            }
         },
     },
 
