@@ -79,10 +79,6 @@
                                 </a>
                             </div>
                         </div>
-                        
-                        {{-- Hidden Inputs for Sorting (Agar sorting tidak hilang saat filter) --}}
-                        <input type="hidden" name="sort_by" value="{{ request('sort_by', 'name') }}">
-                        <input type="hidden" name="sort_direction" value="{{ request('sort_direction', 'asc') }}">
                     </form>
 
                     {{-- Tabel Produk --}}
@@ -93,20 +89,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Jual</th>
-                                    
-                                    {{-- Header Stok dengan Sorting --}}
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer group hover:bg-gray-100" 
-                                        onclick="window.location='{{ route('products.index', array_merge(request()->except(['sort_by', 'sort_direction']), ['sort_by' => 'current_stock', 'sort_direction' => request('sort_by') == 'current_stock' && request('sort_direction') == 'asc' ? 'desc' : 'asc'])) }}'">
-                                        <div class="flex items-center">
-                                            Stok
-                                            @if (request('sort_by') == 'current_stock')
-                                                <span class="ml-1">{!! request('sort_direction') == 'asc' ? '&uarr;' : '&darr;' !!}</span>
-                                            @else
-                                                <span class="ml-1 text-gray-300 group-hover:text-gray-500">&uarr;&darr;</span>
-                                            @endif
-                                        </div>
-                                    </th>
-                                    
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lokasi</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
@@ -154,27 +137,17 @@
                                             {{ $product->rack_location ?? '-' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            {{-- Tombol Detail (Bisa diakses Staff juga) --}}
                                             <a href="{{ route('products.show', $product) }}" class="text-blue-600 hover:text-blue-900 mr-3">Detail</a>
                                             
                                             @if(Auth::user()->isAdmin() || Auth::user()->isManager())
                                                 <a href="{{ route('products.edit', $product) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
-                                                
-                                                <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk {{ $product->name }}? Pastikan stoknya 0.');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
-                                                </form>
                                             @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-6 py-10 whitespace-nowrap text-sm text-gray-500 text-center">
-                                            <div class="flex flex-col items-center justify-center">
-                                                <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                                                <p>Tidak ada produk ditemukan.</p>
-                                            </div>
+                                        <td colspan="6" class="px-6 py-10 text-center text-gray-500">
+                                            Tidak ada produk ditemukan.
                                         </td>
                                     </tr>
                                 @endforelse

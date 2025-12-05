@@ -8,25 +8,23 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB; 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth; // Pastikan Auth diimport
 
 class ProductController extends Controller
 {
-    // Konstruktor dimatikan karena error middleware di Laravel 11
-    // public function __construct()
-    // {
-    //     $this->middleware('auth');
-    //     $this->middleware('role:admin,manager');
-    // }
+    // Konstruktor dimatikan. Pengecekan role dipindah ke setiap fungsi.
+    // public function __construct() {}
 
     /**
-     * Menampilkan daftar produk dengan filter, search, dan pagination.
+     * Menampilkan daftar produk (List Products).
+     * Semua role (Admin, Manager, Staff) boleh melihat list, tapi Staff view only.
      */
     public function index(Request $request)
     {
         $categories = Category::all();
         $query = Product::with('category');
 
-        // 1. Logic Search (Berdasarkan Nama atau SKU)
+        // 1. Logic Search
         if ($search = $request->input('search')) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -54,11 +52,8 @@ class ProductController extends Controller
         $sort_by = $request->input('sort_by', 'name');
         $sort_direction = $request->input('sort_direction', 'asc');
         
-        // Whitelist kolom sorting agar aman
         $allowed_sorts = ['name', 'sku', 'current_stock', 'purchase_price', 'selling_price', 'created_at'];
-        if (!in_array($sort_by, $allowed_sorts)) {
-            $sort_by = 'name';
-        }
+        if (!in_array($sort_by, $allowed_sorts)) $sort_by = 'name';
 
         $query->orderBy($sort_by, $sort_direction);
 
@@ -68,19 +63,29 @@ class ProductController extends Controller
     }
 
     /**
-     * Menampilkan form untuk membuat produk baru.
+     * Form Tambah Produk.
+     * HANYA: Admin & Manager
      */
     public function create()
     {
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Akses Ditolak. Hanya Admin/Manager.');
+        }
+
         $categories = Category::all(); 
         return view('products.create', compact('categories'));
     }
 
     /**
-     * Menyimpan produk baru ke database.
+     * Simpan Produk Baru.
+     * HANYA: Admin & Manager
      */
     public function store(Request $request)
     {
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Akses Ditolak.');
+        }
+
         $validatedData = $request->validate($this->rules());
 
         $imagePath = null;
@@ -96,7 +101,8 @@ class ProductController extends Controller
     }
 
     /**
-     * Menampilkan detail produk.
+     * Detail Produk.
+     * Semua Role Boleh Lihat.
      */
     public function show(Product $product)
     {
@@ -104,26 +110,33 @@ class ProductController extends Controller
     }
 
     /**
-     * Menampilkan form untuk mengedit produk.
+     * Form Edit Produk.
+     * HANYA: Admin & Manager
      */
     public function edit(Product $product)
     {
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Akses Ditolak.');
+        }
         $categories = Category::all();
         return view('products.edit', compact('product', 'categories'));
     }
 
     /**
-     * Memperbarui produk di database.
+     * Update Produk.
+     * HANYA: Admin & Manager
      */
     public function update(Request $request, Product $product)
     {
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Akses Ditolak.');
+        }
+
         $validatedData = $request->validate($this->rules($product->id));
 
         $imagePath = $product->image_path;
         if ($request->hasFile('image_path')) {
-            if ($imagePath) {
-                Storage::disk('public')->delete($imagePath);
-            }
+            if ($imagePath) Storage::disk('public')->delete($imagePath);
             $imagePath = $request->file('image_path')->store('products', 'public');
         }
 
@@ -135,12 +148,18 @@ class ProductController extends Controller
     }
 
     /**
-     * Menghapus produk dari database.
+     * Hapus Produk.
+     * HANYA: Admin & Manager
      */
     public function destroy(Product $product)
     {
+        if (!Auth::user()->isAdmin() && !Auth::user()->isManager()) {
+            abort(403, 'Akses Ditolak.');
+        }
+
+        // Validasi: Tidak boleh hapus jika masih ada stok
         if ($product->current_stock > 0) {
-            return redirect()->route('products.index')->with('error', 'Gagal menghapus! Produk masih memiliki stok (' . $product->current_stock . ' ' . $product->unit . ').');
+            return redirect()->route('products.index')->with('error', 'Gagal menghapus! Produk masih memiliki stok (' . $product->current_stock . ' ' . $product->unit . '). Kosongkan stok terlebih dahulu.');
         }
         
         if ($product->image_path) {
@@ -156,15 +175,10 @@ class ProductController extends Controller
         return [
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
-            'sku' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('products')->ignore($ignoreId),
-            ],
+            'sku' => ['required', 'string', 'max:50', Rule::unique('products')->ignore($ignoreId)],
             'description' => 'nullable|string',
             'purchase_price' => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0|gt:purchase_price',
+            'selling_price' => 'required|numeric|min:0|gt:purchase_price', // Harga Jual > Harga Beli
             'current_stock' => 'required|integer|min:0',
             'min_stock' => 'required|integer|min:0',
             'unit' => 'required|string|max:20',

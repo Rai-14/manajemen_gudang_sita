@@ -222,13 +222,15 @@
 
             @endif
 
-            {{-- MENU NAVIGASI UMUM (Tetap Ada di Bawah untuk Akses Cepat Semua Role kecuali Supplier) --}}
+            {{-- MENU NAVIGASI UMUM (DIPERBAIKI: Filter Akses Berdasarkan Role) --}}
             @if(!Auth::user()->isSupplier())
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mt-8">
                     <div class="p-6 border-b border-gray-200">
                         <h3 class="font-bold text-gray-800">Menu Cepat Sistem</h3>
                     </div>
                     <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        {{-- 1. Transaksi (Semua Role Internal: Admin, Manager, Staff) --}}
                         <a href="{{ route('transactions.index') }}" class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                             <span class="text-2xl mr-3">📋</span>
                             <div>
@@ -236,20 +238,29 @@
                                 <p class="text-xs text-gray-500">Lihat riwayat penuh</p>
                             </div>
                         </a>
-                        <a href="{{ route('products.index') }}" class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                            <span class="text-2xl mr-3">🏷️</span>
-                            <div>
-                                <h4 class="font-bold text-gray-700">Produk & Stok</h4>
-                                <p class="text-xs text-gray-500">Master data barang</p>
-                            </div>
-                        </a>
-                        <a href="{{ route('restock_orders.index') }}" class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                            <span class="text-2xl mr-3">🚚</span>
-                            <div>
-                                <h4 class="font-bold text-gray-700">Restock Order</h4>
-                                <p class="text-xs text-gray-500">Pesanan ke supplier</p>
-                            </div>
-                        </a>
+
+                        {{-- 2. Produk & Stok (HANYA Admin & Manager) --}}
+                        @if(Auth::user()->isAdmin() || Auth::user()->isManager())
+                            <a href="{{ route('products.index') }}" class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                <span class="text-2xl mr-3">🏷️</span>
+                                <div>
+                                    <h4 class="font-bold text-gray-700">Produk & Stok</h4>
+                                    <p class="text-xs text-gray-500">Master data barang</p>
+                                </div>
+                            </a>
+                        @endif
+
+                        {{-- 3. Restock Order (HANYA Admin & Manager) --}}
+                        @if(Auth::user()->isAdmin() || Auth::user()->isManager())
+                            <a href="{{ route('restock_orders.index') }}" class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                <span class="text-2xl mr-3">🚚</span>
+                                <div>
+                                    <h4 class="font-bold text-gray-700">Restock Order</h4>
+                                    <p class="text-xs text-gray-500">Pesanan ke supplier</p>
+                                </div>
+                            </a>
+                        @endif
+
                     </div>
                 </div>
             @endif
