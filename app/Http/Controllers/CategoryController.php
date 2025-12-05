@@ -10,12 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
-    // Batasi akses hanya untuk Admin dan Manager
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('role:admin,manager');
-    }
+    // Konstruktor dimatikan karena error middleware di Laravel 11/12
+    // public function __construct()
+    // {
+    //     $this->middleware('auth');
+    //     $this->middleware('role:admin,manager');
+    // }
 
     /**
      * Display a listing of the resource.
@@ -52,9 +52,6 @@ class CategoryController extends Controller
 
         return redirect()->route('categories.index')->with('success', 'Category added successfully.');
     }
-
-    // Kita akan biarkan method show, edit, update, destroy tetap kosong/minimal
-    // dan melengkapinya di langkah berikutnya.
 
     /**
      * Display the specified resource.
