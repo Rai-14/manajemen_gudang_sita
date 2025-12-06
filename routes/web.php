@@ -12,6 +12,17 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Rute untuk Login Staff / Manager (Warna Biru)
+Route::get('/portal-akses', function () {
+    return view('staff_manager_login');
+})->name('portal.akses');
+
+// Rute untuk Login Supplier (Warna Hijau)
+Route::get('/portal-supplier', function () {
+    return view('supplier_login');
+})->name('portal.supplier');
+
+
 Route::get('/dashboard', [DashboardController::class, 'index']) 
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
@@ -29,29 +40,18 @@ Route::middleware('auth')->group(function () {
     
     // Custom routes untuk Transaksi
     Route::controller(TransactionController::class)->group(function () {
-        // Halaman awal pilih tipe transaksi (Masuk/Keluar)
         Route::get('transactions/create', 'create')->name('transactions.create');
-
-        // Route Barang Masuk
         Route::get('transactions/incoming/create', 'createIncoming')->name('transactions.create_incoming');
         Route::post('transactions/incoming', 'storeIncoming')->name('transactions.store_incoming');
-
-        // Route Barang Keluar
         Route::get('transactions/outgoing/create', 'createOutgoing')->name('transactions.create_outgoing');
         Route::post('transactions/outgoing', 'storeOutgoing')->name('transactions.store_outgoing');
-        
-        // Approval
         Route::patch('transactions/{transaction}/approve', 'approve')->name('transactions.approve');
         Route::patch('transactions/{transaction}/reject', 'reject')->name('transactions.reject');
     });
 
-    // Resource Route diletakkan DI BAWAH Custom Route
     Route::resource('transactions', TransactionController::class)->except(['create', 'store', 'edit', 'update', 'destroy']);
-
-    // Resource Route untuk Restock Orders
     Route::resource('restock_orders', RestockOrderController::class)->except(['edit', 'update', 'destroy']);
     
-    // Custom routes untuk Restock Aksi
     Route::controller(RestockOrderController::class)->group(function () {
         Route::patch('restock_orders/{restock_order}/confirm', 'confirmOrder')->name('restock_orders.confirm');
         Route::patch('restock_orders/{restock_order}/update-status', 'updateStatus')->name('restock_orders.update_status');
