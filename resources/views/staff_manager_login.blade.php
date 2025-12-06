@@ -100,6 +100,8 @@
         <form method="POST" action="{{ route('login') }}">
             <!-- Token CSRF Wajib untuk Laravel -->
             @csrf 
+            <!-- TANDA PINTU: STAFF -->
+        <input type="hidden" name="login_portal" value="staff">
 
             <!-- Input Email -->
             <div class="input-group">

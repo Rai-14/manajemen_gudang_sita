@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Facades\Auth; // Import Auth
+use Illuminate\Support\Facades\Auth;
 
 class RoleMiddleware
 {
@@ -13,28 +13,32 @@ class RoleMiddleware
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string[]  ...$roles Daftar peran yang diizinkan (misal: 'admin', 'manager')
+     * @param  mixed  ...$roles (Daftar peran yang diizinkan)
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        // 1. Cek apakah pengguna terautentikasi
+        // 1. Cek apakah pengguna sudah login
         if (!Auth::check()) {
-            // Jika tidak terautentikasi, redirect ke halaman login
             return redirect('login');
         }
 
-        // Ambil objek pengguna
         $user = Auth::user();
 
-        // 2. Cek apakah peran pengguna ada dalam daftar peran yang diizinkan
-        // in_array(nilai_yang_dicari, array_tempat_mencari)
+        // 2. Cek apakah peran pengguna ada di dalam daftar yang diizinkan
+        // Logika: Jika role user ada di dalam array $roles, silakan lewat.
         if (in_array($user->role, $roles)) {
-            // Jika peran diizinkan, lanjutkan permintaan
             return $next($request);
         }
 
-        // 3. Jika pengguna terautentikasi tetapi peran tidak diizinkan
-        // Redirect ke dashboard dengan pesan error.
-        return redirect('/dashboard')->with('error', 'Anda tidak memiliki izin akses ke halaman ini.');
+        // 3. JIKA DITOLAK:
+        
+        // Jika request berupa AJAX/API (menghindari error redirect di background)
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Unauthorized action.'], 403);
+        }
+
+        // Tampilkan halaman Error 403 (Forbidden) bawaan Laravel
+        // Ini lebih aman daripada redirect, agar user tahu mereka salah kamar.
+        abort(403, 'Akses Ditolak: Anda tidak memiliki izin untuk halaman ini.');
     }
 }

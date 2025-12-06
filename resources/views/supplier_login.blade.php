@@ -68,7 +68,9 @@
         <!-- Perhatikan route-nya beda (nanti kita buat route custom) -->
         <form method="POST" action="{{ route('login') }}"> <!-- Ubah action jika pakai guard khusus -->
             @csrf 
-
+            <!-- TANDA PINTU: SUPPLIER -->
+            <input type="hidden" name="login_portal" value="supplier">
+            
             <div class="input-group">
                 <input type="email" name="email" class="input-premium" placeholder="Email Perusahaan" required autofocus>
                 <i class="fas fa-envelope-open-text"></i>
