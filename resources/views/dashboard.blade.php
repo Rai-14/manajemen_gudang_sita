@@ -297,7 +297,7 @@
                             <a href="{{ route('products.index') }}" class="flex items-center p-4 bg-slate-50 rounded-xl hover:bg-white hover:shadow-md hover:border-blue-200 border border-transparent transition group">
                                 <span class="text-2xl mr-4 grayscale group-hover:grayscale-0 transition">🏷️</span>
                                 <div>
-                                    <h4 class="font-bold text-slate-700 group-hover:text-blue-600 transition">Produk & Stok</h4>
+                                <h4 class="font-bold text-slate-700 group-hover:text-blue-600 transition">Produk & Stok</h4>
                                     <p class="text-xs text-slate-500">Master data barang</p>
                                 </div>
                             </a>
