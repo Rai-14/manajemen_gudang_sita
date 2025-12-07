@@ -21,16 +21,12 @@ class RestockOrderController extends Controller
             $query->where('supplier_id', Auth::user()->supplier_id);
         }
 
-        // Opsional: Jika Admin tetap mencoba masuk (meski dihalangi middleware), kita bisa return kosong atau error
-        // Tapi middleware di routes/web.php sudah menangani ini.
-
         $restockOrders = $query->paginate(15);
         return view('restock_orders.index', compact('restockOrders'));
     }
 
     public function create()
     {
-        // REVISI: Hapus isAdmin()
         if (!Auth::user()->isManager()) {
             abort(403, 'Akses Ditolak. Hanya Warehouse Manager.');
         }
@@ -50,7 +46,6 @@ class RestockOrderController extends Controller
 
     public function store(Request $request)
     {
-        // REVISI: Hapus isAdmin()
         if (!Auth::user()->isManager()) {
             abort(403, 'Akses Ditolak.');
         }
@@ -112,6 +107,60 @@ class RestockOrderController extends Controller
         return view('restock_orders.show', compact('restockOrder'));
     }
 
+    public function updateStatus(Request $request, RestockOrder $restockOrder)
+    {
+        $user = Auth::user();
+
+        // 1. CEK PERMISSION
+        if ($user->isSupplier()) {
+            if ($restockOrder->supplier_id !== $user->supplier_id) {
+                abort(403, 'Akses ditolak. Ini bukan pesanan untuk Anda.');
+            }
+        } elseif (!$user->isManager()) {
+            abort(403, 'Akses ditolak.');
+        }
+        
+        // 2. VALIDASI STATUS (Gunakan 'In Transit' sebagai standar)
+        $request->validate([
+            'status' => ['required', Rule::in(['In Transit', 'Received'])]
+        ]);
+        
+        $newStatus = $request->status;
+
+        // 3. LOGIKA PERUBAHAN STATUS
+        
+        // Kasus A: Supplier mengirim barang (Pending -> In Transit)
+        if ($newStatus === 'In Transit') {
+             if (!in_array($restockOrder->status, ['Pending', 'Confirmed by Supplier'])) {
+                 return redirect()->back()->with('error', 'Pesanan tidak bisa dikirim karena status saat ini tidak valid.');
+             }
+             
+             // PERBAIKAN: Gunakan 'In Transit' agar sesuai Database ENUM
+             $restockOrder->status = 'In Transit';
+             $restockOrder->save();
+             
+             return redirect()->back()->with('success', "Barang berhasil dikirim (Status: In Transit).");
+        }
+
+        // Kasus B: Manager menerima barang (In Transit -> Received)
+        if ($newStatus === 'Received') {
+            if (!Auth::user()->isManager()) {
+                abort(403, 'Hanya Manager yang bisa menerima barang.');
+            }
+            
+            if ($restockOrder->status !== 'In Transit') {
+                return redirect()->back()->with('error', 'Pesanan belum dikirim oleh supplier (harus In Transit).');
+            }
+            
+            $restockOrder->status = 'Received';
+            $restockOrder->save();
+            
+            return redirect()->back()->with('success', "Pesanan Diterima. Silakan buat Transaksi Barang Masuk.");
+        }
+
+        return redirect()->back()->with('error', "Status tidak dikenali.");
+    }
+
     public function confirmOrder(Request $request, RestockOrder $restockOrder)
     {
         if (!Auth::user()->isSupplier() || Auth::user()->supplier_id !== $restockOrder->supplier_id) {
@@ -125,32 +174,5 @@ class RestockOrderController extends Controller
         $restockOrder->save();
         
         return redirect()->back()->with('success', "Pesanan #{$restockOrder->po_number} berhasil dikonfirmasi.");
-    }
-    
-    public function updateStatus(Request $request, RestockOrder $restockOrder)
-    {
-        // REVISI: Hapus isAdmin()
-        if (!Auth::user()->isManager()) {
-            abort(403, 'Akses ditolak. Hanya Manager.');
-        }
-        
-        $request->validate(['status' => ['required', Rule::in(['In Transit', 'Received'])]]);
-        $newStatus = $request->status;
-
-        if ($newStatus === 'In Transit' && $restockOrder->status !== 'Confirmed by Supplier') {
-            return redirect()->back()->with('error', 'Pesanan harus dikonfirmasi supplier dulu.');
-        }
-        if ($newStatus === 'Received' && $restockOrder->status !== 'In Transit') {
-            return redirect()->back()->with('error', 'Pesanan harus status In Transit dulu.');
-        }
-
-        $restockOrder->status = $newStatus;
-        $restockOrder->save();
-        
-        if ($newStatus === 'Received') {
-            return redirect()->back()->with('success', "Pesanan Diterima. Silakan buat Transaksi Barang Masuk.");
-        }
-
-        return redirect()->back()->with('success', "Status berhasil diperbarui menjadi {$newStatus}.");
     }
 }

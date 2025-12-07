@@ -45,16 +45,22 @@
                             {{ __('Kategori') }}
                         </x-nav-link>
                         
-                        {{-- TAMBAHAN BARU: MENU LAPORAN --}}
                         <x-nav-link :href="route('reports.inventory')" :active="request()->routeIs('reports.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('reports.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
                             {{ __('Laporan') }}
                         </x-nav-link>
                     @endif
 
-                    {{-- Restock (Hanya Manager & Supplier) --}}
-                    @if(Auth::user()->isManager() || Auth::user()->isSupplier())
+                    {{-- Restock Manager --}}
+                    @if(Auth::user()->isManager())
                         <x-nav-link :href="route('restock_orders.index')" :active="request()->routeIs('restock_orders.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('restock_orders.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
                             {{ __('Restock') }}
+                        </x-nav-link>
+                    @endif
+
+                    {{-- KHUSUS SUPPLIER: MENU "SEMUA PESANAN" --}}
+                    @if(Auth::user()->isSupplier())
+                        <x-nav-link :href="route('restock_orders.index')" :active="request()->routeIs('restock_orders.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('restock_orders.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
+                            {{ __('Semua Pesanan') }}
                         </x-nav-link>
                     @endif
                 </div>
@@ -101,8 +107,8 @@
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <x-dropdown-link :href="route('logout')"
-                                        onclick="event.preventDefault(); this.closest('form').submit();"
-                                        class="text-red-400 hover:bg-gray-700">
+                                            onclick="event.preventDefault(); this.closest('form').submit();"
+                                            class="text-red-400 hover:bg-gray-700">
                                     {{ __('Log Out') }}
                                 </x-dropdown-link>
                             </form>
@@ -137,7 +143,6 @@
                 <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
                     {{ __('Produk') }}
                 </x-responsive-nav-link>
-                {{-- TAMBAHAN MOBILE: Laporan --}}
                 <x-responsive-nav-link :href="route('reports.inventory')" :active="request()->routeIs('reports.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
                     {{ __('Laporan') }}
                 </x-responsive-nav-link>
@@ -146,7 +151,7 @@
             {{-- Restock Mobile --}}
             @if(Auth::user()->isManager() || Auth::user()->isSupplier())
                 <x-responsive-nav-link :href="route('restock_orders.index')" :active="request()->routeIs('restock_orders.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
-                    {{ __('Restock') }}
+                    {{ __('Semua Pesanan') }}
                 </x-responsive-nav-link>
             @endif
         </div>
