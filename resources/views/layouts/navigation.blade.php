@@ -20,9 +20,7 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    {{-- ==================================================== --}}
                     {{-- MENU KHUSUS ADMIN: KELOLA PENGGUNA --}}
-                    {{-- ==================================================== --}}
                     @if(Auth::user()->isAdmin())
                         <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')" 
                             class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 
@@ -30,7 +28,6 @@
                             {{ __('Pengguna') }}
                         </x-nav-link>
                     @endif
-                    {{-- ==================================================== --}}
 
                     {{-- Transaksi (Bukan Supplier) --}}
                     @if(!Auth::user()->isSupplier())
@@ -39,7 +36,7 @@
                         </x-nav-link>
                     @endif
 
-                    {{-- Master Data (Admin & Manager) --}}
+                    {{-- Master Data & Laporan (Admin & Manager) --}}
                     @if(Auth::user()->isAdmin() || Auth::user()->isManager())
                         <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('products.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
                             {{ __('Produk') }}
@@ -47,10 +44,15 @@
                         <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('categories.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
                             {{ __('Kategori') }}
                         </x-nav-link>
+                        
+                        {{-- TAMBAHAN BARU: MENU LAPORAN --}}
+                        <x-nav-link :href="route('reports.inventory')" :active="request()->routeIs('reports.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('reports.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
+                            {{ __('Laporan') }}
+                        </x-nav-link>
                     @endif
 
-                    {{-- Restock (Semua kecuali Staff biasa) --}}
-                    @if(Auth::user()->isAdmin() || Auth::user()->isManager() || Auth::user()->isSupplier())
+                    {{-- Restock (Hanya Manager & Supplier) --}}
+                    @if(Auth::user()->isManager() || Auth::user()->isSupplier())
                         <x-nav-link :href="route('restock_orders.index')" :active="request()->routeIs('restock_orders.*')" class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 {{ request()->routeIs('restock_orders.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
                             {{ __('Restock') }}
                         </x-nav-link>
@@ -62,7 +64,6 @@
             <div class="hidden sm:flex sm:items-center sm:ms-6 space-x-4">
                 
                 {{-- GLOBAL SEARCH BAR --}}
-                {{-- Pastikan route 'search.global' ada atau hapus form ini sementara jika belum --}}
                 <form action="#" method="GET" class="relative">
                     <input type="text" name="query" placeholder="Cari..." 
                            class="w-48 px-3 py-2 border border-gray-700 rounded-lg text-sm bg-gray-800 text-white focus:border-cyan-500 focus:ring-cyan-500 transition">
@@ -135,6 +136,17 @@
             @if(Auth::user()->isAdmin() || Auth::user()->isManager())
                 <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
                     {{ __('Produk') }}
+                </x-responsive-nav-link>
+                {{-- TAMBAHAN MOBILE: Laporan --}}
+                <x-responsive-nav-link :href="route('reports.inventory')" :active="request()->routeIs('reports.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                    {{ __('Laporan') }}
+                </x-responsive-nav-link>
+            @endif
+
+            {{-- Restock Mobile --}}
+            @if(Auth::user()->isManager() || Auth::user()->isSupplier())
+                <x-responsive-nav-link :href="route('restock_orders.index')" :active="request()->routeIs('restock_orders.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                    {{ __('Restock') }}
                 </x-responsive-nav-link>
             @endif
         </div>

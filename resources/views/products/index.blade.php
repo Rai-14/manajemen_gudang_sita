@@ -137,17 +137,29 @@
                                             {{ $product->rack_location ?? '-' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <a href="{{ route('products.show', $product) }}" class="text-blue-600 hover:text-blue-900 mr-3">Detail</a>
+                                            <a href="{{ route('products.show', $product) }}" class="text-blue-600 hover:text-blue-900 mr-3 font-bold">Detail</a>
                                             
                                             @if(Auth::user()->isAdmin() || Auth::user()->isManager())
-                                                <a href="{{ route('products.edit', $product) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                                                <a href="{{ route('products.edit', $product) }}" class="text-indigo-600 hover:text-indigo-900 mr-3 font-bold">Edit</a>
+                                                
+                                                {{-- TOMBOL HAPUS (DITAMBAHKAN) --}}
+                                                <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-900 font-bold bg-transparent border-none cursor-pointer">
+                                                        Hapus
+                                                    </button>
+                                                </form>
                                             @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
                                         <td colspan="6" class="px-6 py-10 text-center text-gray-500">
-                                            Tidak ada produk ditemukan.
+                                            <div class="flex flex-col items-center justify-center">
+                                                <svg class="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                                                <p>Tidak ada produk ditemukan.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
