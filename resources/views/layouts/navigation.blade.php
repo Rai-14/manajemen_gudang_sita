@@ -27,6 +27,12 @@
                             {{ request()->routeIs('users.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
                             {{ __('Pengguna') }}
                         </x-nav-link>
+                        <!-- TAMBAHAN BARU: Menu Data Supplier -->
+                        <x-nav-link :href="route('suppliers.index')" :active="request()->routeIs('suppliers.*')" 
+                            class="text-gray-400 hover:text-cyan-400 focus:text-cyan-400 
+                            {{ request()->routeIs('suppliers.*') ? '!text-white !border-cyan-500' : '!border-transparent' }}">
+                            {{ __('Data Supplier') }}
+                        </x-nav-link>
                     @endif
 
                     {{-- Transaksi (Bukan Supplier) --}}
