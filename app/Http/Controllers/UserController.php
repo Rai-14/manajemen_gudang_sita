@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Supplier; // Pastikan ini ada
+use App\Models\Supplier; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -12,13 +12,17 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('supplier')->latest()->paginate(10);
+        // Urutkan status 'pending' paling atas agar Admin langsung lihat
+        $users = User::with('supplier')
+                    ->orderByRaw("FIELD(status, 'pending', 'active')")
+                    ->latest()
+                    ->paginate(10);
+                    
         return view('users.index', compact('users'));
     }
 
     public function create()
     {
-        // Ambil semua data supplier untuk dropdown
         $suppliers = Supplier::all();
         return view('users.create', compact('suppliers'));
     }
@@ -30,7 +34,6 @@ class UserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['required', 'in:admin,manager,staff,supplier'],
-            // Validasi: Jika role supplier, maka supplier_id wajib diisi
             'supplier_id' => ['nullable', 'required_if:role,supplier', 'exists:suppliers,id'],
         ]);
 
@@ -39,8 +42,8 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
-            // Logika: Hanya simpan supplier_id jika rolenya supplier
             'supplier_id' => $request->role === 'supplier' ? $request->supplier_id : null,
+            'status' => 'active', // Jika Admin yang buat manual, langsung aktif
         ]);
 
         return redirect()->route('users.index')->with('success', 'Pengguna berhasil ditambahkan!');
@@ -87,9 +90,18 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('success', 'Pengguna berhasil dihapus.');
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == "23000") {
-                return back()->with('error', 'Gagal menghapus: Pengguna ini memiliki riwayat transaksi/order.');
+                return back()->with('error', 'Gagal menghapus: Pengguna ini memiliki riwayat transaksi.');
             }
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Method untuk menyetujui user pending
+     */
+    public function approve(User $user)
+    {
+        $user->update(['status' => 'active']);
+        return back()->with('success', "Akun {$user->name} berhasil disetujui dan diaktifkan.");
     }
 }

@@ -9,66 +9,34 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable; // Hapus HasApiTokens di sini
+    use HasFactory, Notifiable;
 
-    /**
-     * Kolom yang dapat diisi secara massal (mass assignable).
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',          // Kolom baru untuk peran pengguna
-        'supplier_id',   // Kolom baru untuk peran supplier 
+        'role',
+        'supplier_id',
+        'status', 
     ];
 
-    /**
-     * Kolom yang harus disembunyikan untuk serialisasi.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Kolom yang harus di-casting.
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
 
-    // --- HELPER METHODS UNTUK ROLE CHECKING ---
-
-    public function isRole(string $role): bool
-    {
-        return $this->role === $role;
-    }
-
-    public function isManager(): bool
-    {
-        return $this->isRole('manager');
-    }
-
-    // Tambahkan helper role lainnya sesuai kebutuhan...
-    public function isStaff(): bool
-    {
-        return $this->isRole('staff');
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->isRole('admin');
-    }
+    // ... sisa method helper role dan relasi tetap sama ...
+    public function isRole(string $role): bool { return $this->role === $role; }
+    public function isManager(): bool { return $this->isRole('manager'); }
+    public function isStaff(): bool { return $this->isRole('staff'); }
+    public function isAdmin(): bool { return $this->isRole('admin'); }
+    public function isSupplier(): bool { return $this->isRole('supplier'); }
     
-    public function isSupplier(): bool
-    {
-        return $this->isRole('supplier');
-    }
-
-    // --- RELASI ---
-
-    // Relasi ke tabel Supplier (hanya berlaku untuk role 'supplier')
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);

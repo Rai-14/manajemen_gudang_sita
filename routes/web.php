@@ -9,7 +9,8 @@ use App\Http\Controllers\RestockOrderController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\SupplierController; 
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\Auth\SupplierRegisterController; 
 
 /*
 |--------------------------------------------------------------------------
@@ -22,24 +23,25 @@ Route::get('/portal-akses', function () { return view('staff_manager_login'); })
 Route::get('/portal-supplier', function () { return view('supplier_login'); })->name('portal.supplier');
 
 // ====================================================
+// RUTE PUBLIC: PENDAFTARAN SUPPLIER 
+// ====================================================
+Route::get('/register-supplier', [SupplierRegisterController::class, 'create'])->name('supplier.register');
+Route::post('/register-supplier', [SupplierRegisterController::class, 'store'])->name('supplier.register.store');
+
+
+// ====================================================
 // RUTE DARURAT: RESET TRANSAKSI (HANYA ADMIN)
 // ====================================================
 Route::get('/reset-database-transaksi', function () {
-    // 1. Cek apakah yang akses adalah Admin
     if (!auth()->check() || !auth()->user()->isAdmin()) { 
         abort(403, 'Hanya Admin yang boleh mereset data.'); 
     }
 
-    // 2. Matikan pengecekan Foreign Key (Agar bisa hapus paksa)
     \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
 
     try {
-        // 3. Hapus Data Rincian Barang (INI YANG KEMARIN KETINGGALAN)
-        // Kita pakai DB::table agar aman, tidak peduli modelnya ada atau tidak
         \Illuminate\Support\Facades\DB::table('transaction_details')->truncate();
         \Illuminate\Support\Facades\DB::table('restock_order_details')->truncate();
-
-        // 4. Hapus Data Judul Transaksi/Order
         \Illuminate\Support\Facades\DB::table('transactions')->truncate();
         \Illuminate\Support\Facades\DB::table('restock_orders')->truncate();
         
@@ -48,7 +50,6 @@ Route::get('/reset-database-transaksi', function () {
         $pesan = 'Gagal: ' . $e->getMessage();
     }
 
-    // 5. Hidupkan kembali pengecekan Foreign Key
     \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
     return redirect()->route('dashboard')->with('success', $pesan);
@@ -71,6 +72,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // --- ADMIN ---
     Route::middleware(['role:admin'])->group(function () {
         Route::resource('users', UserController::class);
+        // Tambahkan rute approve user di sini (untuk fitur approval nanti)
+        Route::patch('/users/{user}/approve', [UserController::class, 'approve'])->name('users.approve');
         Route::resource('suppliers', SupplierController::class);
     });
 
