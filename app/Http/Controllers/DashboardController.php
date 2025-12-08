@@ -28,6 +28,17 @@ class DashboardController extends Controller
             $data['total_products'] = Product::count();
             $data['total_low_stock'] = Product::whereColumn('current_stock', '<=', 'min_stock')->count();
             
+        // --- TAMBAHAN BARU: RESTOCK ORDERS BERJALAN ---
+        // Mengambil order yang statusnya Pending, Confirmed, atau In Transit
+        $data['ongoing_restock_orders'] = RestockOrder::with('supplier')
+                                            ->whereIn('status', ['Pending', 'Confirmed by Supplier', 'In Transit'])
+                                            ->orderBy('created_at', 'desc')
+                                            ->limit(5)
+                                            ->get();
+            // --- TAMBAHAN BARU: MENGHITUNG NILAI INVENTORI (Total Aset) ---
+            // Rumus: Sum (Stok Saat Ini * Harga Beli)
+            $data['total_inventory_value'] = Product::sum(DB::raw('current_stock * purchase_price'));
+
             $data['pending_transactions'] = Transaction::where('status', 'Pending')->count();
             $data['pending_restock_orders'] = RestockOrder::where('status', 'Pending')->count();
 
@@ -110,28 +121,22 @@ class DashboardController extends Controller
                                                     ->count();
         }
         
-        // --- LOGIKA DASHBOARD SUPPLIER (UPDATED) ---
+        // --- LOGIKA DASHBOARD SUPPLIER ---
         elseif ($user->isSupplier()) {
             $supplierId = $user->supplier_id ?? null;
 
-            // Menambahkan ->with('details.product')
-            // Agar nama barang bisa diambil di View
-            
-            // 1. Pesanan Baru
             $data['active_orders'] = RestockOrder::with(['user', 'details.product']) 
                                                 ->where('supplier_id', $supplierId)
                                                 ->whereIn('status', ['Pending', 'Confirmed by Supplier']) 
                                                 ->orderBy('created_at', 'asc')
                                                 ->get();
 
-            // 2. Sedang Dikirim
             $data['shipped_orders'] = RestockOrder::with(['user', 'details.product'])
                                                 ->where('supplier_id', $supplierId)
                                                 ->where('status', 'In Transit') 
                                                 ->orderBy('updated_at', 'desc')
                                                 ->get();
 
-            // 3. Riwayat Selesai
             $data['completed_orders'] = RestockOrder::with(['user', 'details.product'])
                                                 ->where('supplier_id', $supplierId)
                                                 ->where('status', 'Received')

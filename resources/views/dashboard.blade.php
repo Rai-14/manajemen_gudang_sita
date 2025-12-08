@@ -57,6 +57,19 @@
                     </div>
                 </div>
 
+                <!-- Kartu Nilai Inventori -->
+                <div class="bg-white rounded-xl p-6 border-l-4 border-indigo-500 shadow-sm hover:shadow-md transition">
+                    <div class="text-indigo-600 text-xs font-bold uppercase tracking-wider">Nilai Aset Gudang</div>
+                    
+                    <!-- Bagian Menampilkan Angka -->
+                    <div class="text-2xl font-extrabold text-slate-800 mt-2">
+                        {{-- Format Rupiah: Rp 150.000.000 --}}
+                        Rp {{ number_format($total_inventory_value ?? 0, 0, ',', '.') }}
+                    </div>
+                    
+                    <p class="text-xs text-indigo-400 mt-1">Estimasi Harga Beli (Cost)</p>
+                </div>
+
                 {{-- Tabel Peringatan & Approval --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     
